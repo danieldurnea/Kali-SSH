@@ -1,7 +1,7 @@
 env:
   TZ: Asia/Kolkata
-  GIT_USERNAME: danieldurnea
-  GIT_EMAIL: danieldurnea@@gmail.com
+  GIT_USERNAME: Sushrut1101
+  GIT_EMAIL: guptasushrut@gmail.com
 
 task:
   name: "Kali Linux SSH"
@@ -9,8 +9,8 @@ task:
   timeout_in: 120m
   container:
       image: kalilinux/kali-rolling:latest
-      cpu: 16
-      memory: 64G
+      cpu: 8
+      memory: 32G
 
   Setup_script:
       - apt update
