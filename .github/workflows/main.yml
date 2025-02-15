@@ -10,7 +10,7 @@ task:
   container:
       image: kalilinux/kali-rolling:latest
       cpu: 8
-      memory: 32G
+      memory: 64G
 
   Setup_script:
       - apt update
