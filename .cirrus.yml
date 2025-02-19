@@ -1,4 +1,4 @@
-v:
+env:
   TZ: Asia/Kolkata
   GIT_USERNAME: danieldurnea
   GIT_EMAIL: danieldurnea@gmail.com
