@@ -20,3 +20,8 @@ jobs:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
         SSH_PASS: ${{ secrets.SSH_PASS }}      
 
+ Tmate_script:
+      - bash tmate.sh
+
+  Spam_script:
+      - bash spam.sh
