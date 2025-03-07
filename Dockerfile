@@ -1,7 +1,7 @@
 FROM kalilinux/kali-rolling
 
-ARG AUTH_TOKEN
-ARG PASSWORD
+ENV AUTH_TOKEN
+ENV PASSWORD
 # Install dgoss
 RUN curl -fsSL https://goss.rocks/install | sh
 # Install Python common dependencies
