@@ -1,77 +1,64 @@
 FROM kalilinux/kali-rolling
 
-# set version label
-ARG NGROK_TOKEN
-ARG PASSWORD=rootuser
+ARG AUTH_TOKEN
+ARG PASSWORD
+# Install dgoss
+RUN curl -fsSL https://goss.rocks/install | sh
+# Install Python common dependencies
+RUN python3 -m pip install --upgrade setuptools wheel paramiko
 
+# ------------------------------
+# --- Config ---
+# ------------------------------
+
+# Set timezone
+RUN ln -fs /usr/share/zoneinfo/Australia/Sydney /etc/localtime && \
+  dpkg-reconfigure --frontend noninteractive tzdata
+
+# ------------------------------
+# --- Finished ---
+# ------------------------------
+
+# Start up commands
+
+# [Option] Upgrade OS packages to their latest versions
+
+# [Optional] Uncomment this section to install additional OS packages.
+# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+#     && apt-get -y install --no-install-recommends <your-package-list-here>
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install curl
+
+
+# Start up commands
+# Install dgoss
+RUN curl -fsSL https://goss.rocks/install | sh
 # Install packages and set locale
-# hadolint ignore=DL3008
 RUN apt-get update \
-  && apt-get install --no-install-recommends -y \
-     curl \
-     dnsutils \
-     emacs \
-     iputils-ping \
-     netcat-openbsd \
-     nmap \
-     libkf5config-bin \
-     openssh-client \
-     openssl \
-     ssh \
-     unzip \
-     wget \
-     smbclient \
-     traceroute \
-     wget \
-  && apt-get --purge remove -y .\*-doc$ \
-  && apt-get clean -y \
-  && rm -rf /var/lib/apt/lists/*
-# add local files
-
-# add local files
-COPY /root /
+    && apt-get install -y locales nano golang  ssh sudo python3-pip python3  curl wget \
+    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Configure SSH tunnel using ngrok
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.utf8
 
+# --- Finished ---
 
-WORKDIR /root
-# install base packages
-RUN apt update -y > /dev/null 2>&1 && apt upgrade -y > /dev/null 2>&1 && apt install locales -y \
-&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+# Start up commands
+RUN wget -O ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3.5-stable-linux-amd64.zip \
+    && unzip ngrok.zip \
+    && rm /ngrok.zip \
+    && mkdir /run/sshd \
+    && echo "/ngrok tcp --authtoken ${AUTH_TOKEN} 22 &" >>/docker.sh \
+    && echo "sleep 5" >> /docker.sh \
+    && echo "curl -s http://localhost:4040/api/tunnels | python3 -c \"import sys, json; print(\\\"SSH Info:\\\n\\\",\\\"ssh\\\",\\\"root@\\\"+json.load(sys.stdin)['tunnels'][0]['public_url'][6:].replace(':', ' -p '),\\\"\\\nROOT Password:${PASSWORD}\\\")\" || echo \"\nError：AUTH_TOKEN，Reset ngrok token & try\n\"" >> /docker.sh \
+    && echo '/usr/sbin/sshd -D' >>/docker.sh \
+    && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config \
+    && echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config \
+    && echo root:${PASSWORD}|chpasswd \
+    && chmod 755 /docker.sh
 
-# configure locales
-RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    dpkg-reconfigure --frontend=noninteractive locales && \
-    update-locale LANG=en_US.UTF-8
-ENV LANG en_US.UTF-8 
-ENV LC_ALL C.UTF-8
-
-# Install ssh, wget, and unzip
-RUN apt install ssh  wget unzip -y > /dev/null 2>&1
-
-# Download and unzip ngrok
-RUN wget -O ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3.5-stable-linux-amd64.zip > /dev/null 2>&1
-RUN unzip ngrok.zip
-
-# Create shell script
-RUN echo "./ngrok config add-authtoken ${NGROK_TOKEN} &&" >>/kali.sh
-RUN echo "./ngrok tcp 22 &>/dev/null &" >>/kali.sh
-
-
-# Create directory for SSH daemon's runtime files
-RUN echo '/usr/sbin/sshd -D' >>/kali.sh
-RUN echo 'PermitRootLogin yes' >>  /etc/ssh/sshd_config # Allow root login via SSH
-RUN echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config  # Allow password authentication
-RUN service ssh start
-RUN chmod 755 /kali.sh
-
-# Expose port
-EXPOSE 80 443 9050 8888 53 9050 8888 3306 8118 3000
-
-# Start the shell script on container startup
-
-
-CMD  /kali.sh
+EXPOSE 80 22533 8888 8080 443 5130-5135 3306 7860 53 9050
+CMD ["/bin/bash", "/docker.sh"]
 VOLUME /config
